@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#00254c">
+<meta name="format-detection" content="telephone=no">
+<title>Verfügbarkeitsplaner</title>
+<style>
+  :root {
+    --navy: #00254c;
+    --navy-2: #0a3a6b;
+    --orange: #ee7202;
+    --orange-2: #d66100;
+    --teal: #247c8f;
+    --violet: #7a3f8a;
+    --bg: #eef2f7;
+    --card: #ffffff;
+    --soft: #f4f7fb;
+    --line: #dde4ec;
+    --text: #1f2a37;
+    --muted: #64748b;
+    --red: #c2410c;
+    --ok: #2f855a;
+    --lec: #d9534f;
+    --free: #3f9a5e;
+    --holiday-bg: #fbe3e3;
+    --holiday-tx: #8a1f1f;
+    --school-bg: #fff1d6;
+    --school-tx: #8a5a0b;
+    --r: 16px;
+    --shadow: 0 1px 2px rgba(0,37,76,.06), 0 8px 24px rgba(0,37,76,.07);
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: var(--text); background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, textarea { font: inherit; color: inherit; }
+  button { -webkit-tap-highlight-color: transparent; cursor: pointer; touch-action: manipulation; }
+
+  /* Header */
+  header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
+    color: #fff;
+    padding: max(18px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 74px max(20px, env(safe-area-inset-left));
+    position: relative; overflow: hidden;
+  }
+  .header-in { position: relative; z-index: 1; }
+  .header-in { max-width: 1120px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .logo { width: 42px; height: 42px; border-radius: 12px; background: var(--orange); display: grid; place-items: center; flex: none; box-shadow: 0 6px 16px rgba(238,114,2,.35); }
+  .logo svg { width: 24px; height: 24px; }
+  h1 { margin: 0; font-size: 1.25rem; font-weight: 700; letter-spacing: -.01em; }
+  .sub { margin: 2px 0 0; font-size: .85rem; color: rgba(255,255,255,.7); }
+  .pill { padding: 7px 14px; border-radius: 999px; font-size: .85rem; font-weight: 700; background: var(--lec); color: #fff; white-space: nowrap; transition: background .2s; }
+
+  main {
+    max-width: 1120px; margin: -52px auto 0; display: grid; gap: 18px;
+    padding: 0 max(16px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+  .card { background: var(--card); border-radius: var(--r); box-shadow: var(--shadow); padding: 18px; }
+  .card h2 { margin: 0 0 14px; font-size: 1.02rem; font-weight: 700; color: var(--navy); letter-spacing: -.01em; }
+
+  /* Toolbar */
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+  .seg { display: inline-grid; grid-template-columns: 1fr 1fr; background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 4px; gap: 4px; }
+  .seg button { border: 0; background: transparent; min-height: 44px; min-width: 130px; padding: 0 18px; border-radius: 9px; font-weight: 600; color: var(--muted); transition: all .15s; }
+  .seg button[aria-pressed="true"] { background: #fff; color: var(--navy); box-shadow: 0 1px 4px rgba(0,37,76,.14); }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+  .btn { min-height: 46px; padding: 0 18px; border-radius: 12px; border: 1px solid transparent; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background .15s, transform .05s; }
+  .btn:active { transform: scale(.98); }
+  .btn.primary { background: var(--orange); color: #fff; box-shadow: 0 6px 16px rgba(238,114,2,.25); }
+  .btn.primary:hover { background: var(--orange-2); }
+  .btn.secondary { background: #fff; border-color: var(--line); color: var(--navy); }
+  .btn.secondary:hover { background: var(--soft); }
+  .btn.navy { background: var(--navy); color: #fff; }
+  .btn.navy:hover { background: var(--navy-2); }
+  .btn.small { min-height: 38px; padding: 0 14px; font-size: .9rem; border-radius: 10px; }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+  /* Entries */
+  .entries { display: grid; gap: 12px; }
+  .entry { border: 1px solid var(--line); border-radius: 14px; padding: 14px; background: #fff; display: grid; gap: 12px; }
+  .entry.blank { background: var(--soft); border-style: dashed; }
+  .entry-head { display: flex; align-items: center; justify-content: space-between; }
+  .entry-no { font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 0; background: var(--soft); color: var(--navy); font-size: 1.3rem; line-height: 1; display: grid; place-items: center; }
+  .icon-btn:hover { background: var(--navy); color: #fff; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .field { display: grid; gap: 5px; }
+  .field > span { font-size: .78rem; font-weight: 700; color: var(--muted); }
+  input[type="date"], input[type="time"], input[type="text"] {
+    width: 100%; min-height: 46px; padding: 8px 12px; font-size: 16px;
+    border: 1px solid #cbd5e1; border-radius: 10px; background: #fff; appearance: none; -webkit-appearance: none;
+  }
+  input:focus, textarea:focus { outline: 3px solid rgba(238,114,2,.22); border-color: var(--orange); }
+  .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .chip { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 8px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--soft); text-align: left; transition: all .15s; }
+  .chip .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--c); flex: none; }
+  .chip .t { display: grid; line-height: 1.2; }
+  .chip .t b { font-size: .92rem; font-weight: 650; }
+  .chip .t small { font-size: .78rem; color: var(--muted); }
+  .chip[aria-pressed="true"] { background: color-mix(in srgb, var(--c) 12%, #fff); border-color: var(--c); }
+  .chip[aria-pressed="true"] .t b { color: var(--c); }
+  .chip[aria-pressed="true"]::after { content: "✓"; margin-left: auto; color: var(--c); font-weight: 800; }
+  .hint { font-size: .82rem; color: var(--muted); margin: 0; }
+  .hint.warn { color: var(--red); }
+  @media (max-width: 480px) { .chips { grid-template-columns: 1fr; } }
+
+  /* Calendar */
+  .cal-head { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .cal-head h2 { margin: 0; text-align: center; font-size: 1.1rem; }
+  .nav { width: 44px; height: 44px; border-radius: 12px; border: 1px solid var(--line); background: #fff; color: var(--navy); font-size: 1.4rem; display: grid; place-items: center; }
+  .nav:hover { background: var(--soft); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .wd { text-align: center; font-size: .76rem; font-weight: 700; color: var(--muted); padding: 6px 0; }
+  .day { position: relative; aspect-ratio: 1 / 1; min-height: 46px; border: 0; border-radius: 12px; background: var(--soft); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-weight: 600; font-size: .98rem; color: var(--text); transition: transform .05s; }
+  .day:active { transform: scale(.95); }
+  .day.empty { background: transparent; pointer-events: none; }
+  .day.school { background: var(--school-bg); color: var(--school-tx); }
+  .day.holiday { background: var(--holiday-bg); color: var(--holiday-tx); }
+  .day.today .num { box-shadow: 0 0 0 2px var(--navy); }
+  .day .num { min-width: 28px; height: 28px; padding: 0 4px; border-radius: 999px; display: grid; place-items: center; line-height: 1; }
+  .day.sel .num { background: var(--navy); color: #fff; box-shadow: none; }
+  .day.sel.today .num { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--navy); }
+  .day.sel { box-shadow: inset 0 0 0 2px rgba(0,37,76,.35); }
+  .dots { display: flex; gap: 3px; height: 6px; }
+  .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--c); display: block; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 14px; font-size: .82rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(0,0,0,.08); display: block; }
+  .legend i.round { border-radius: 50%; border: 0; width: 10px; height: 10px; }
+  .cal-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; }
+  .stage { font-size: .88rem; font-weight: 600; color: var(--navy); background: #e8f0f9; padding: 8px 12px; border-radius: 10px; }
+  .stage.on { background: #fff0e0; color: var(--orange-2); }
+
+  /* Output */
+  .out-grid { display: grid; gap: 14px; }
+  .out-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; font-size: .8rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  textarea {
+    width: 100%; min-height: 320px; padding: 14px; font-size: 16px; line-height: 1.55;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--soft); resize: vertical; font-family: inherit;
+  }
+  .notes { display: grid; gap: 8px; margin-bottom: 14px; }
+  .note { padding: 10px 12px; border-radius: 10px; background: #fff4e5; color: #8a4b00; font-size: .88rem; border: 1px solid #fde0b5; }
+  .out-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .out-actions .btn { flex: 1 1 200px; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translate(-50%, 20px); background: var(--navy); color: #fff; padding: 12px 20px; border-radius: 999px; font-weight: 650; box-shadow: 0 10px 30px rgba(0,37,76,.35); opacity: 0; pointer-events: none; transition: all .25s; z-index: 20; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .toast.err { background: #b42318; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-in">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/><path d="M8.5 15l2.3 2.3L15.5 13"/></svg>
+      </div>
+      <div>
+        <h1>Verfügbarkeitsplaner</h1>
+        <p class="sub">Zeiträume wählen, Nachricht kopieren</p>
+      </div>
+    </div>
+    <div class="pill" id="status" aria-live="polite">Vorlesungszeit</div>
+  </div>
+</header>
+
+<main>
+  <section class="card toolbar" aria-label="Eingabe">
+    <div class="seg" role="group" aria-label="Eingabemodus">
+      <button type="button" id="modeDuty" aria-pressed="true">Dienstart</button>
+      <button type="button" id="modeTime" aria-pressed="false">Uhrzeit</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn secondary" id="nextWeekBtn">Nächste Woche</button>
+      <button type="button" class="btn primary" id="addBtn">+ Neuer Eintrag</button>
+    </div>
+  </section>
+
+  <div class="layout">
+    <section class="card" aria-label="Zeiträume">
+      <h2>Zeiträume</h2>
+      <div class="entries" id="entries"></div>
+    </section>
+
+    <section class="card" aria-label="Kalender">
+      <div class="cal-head">
+        <button type="button" class="nav" id="prevBtn" aria-label="Vorheriger Monat">‹</button>
+        <h2 id="calTitle"></h2>
+        <button type="button" class="nav" id="nextBtn" aria-label="Nächster Monat">›</button>
+      </div>
+      <div class="cal-grid" id="cal"></div>
+      <div class="cal-foot">
+        <div class="stage" id="stage" aria-live="polite"></div>
+        <button type="button" class="btn secondary small" id="todayBtn">Heute</button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+  </div>
+
+  <section class="card" aria-label="Nachricht">
+    <h2>Nachricht</h2>
+    <div class="notes" id="notes"></div>
+    <div class="out-grid">
+      <div>
+        <div class="out-label"><span>Betreff</span><button type="button" class="btn navy small" id="copySubject">Kopieren</button></div>
+        <input type="text" id="subject" placeholder="Wird automatisch erstellt">
+      </div>
+      <div>
+        <div class="out-label"><span>Text</span><button type="button" class="btn navy small" id="copyBody">Kopieren</button></div>
+        <textarea id="body" placeholder="Wähle im Kalender einen Zeitraum aus, dann erscheint hier der Text. Du kannst ihn vor dem Kopieren noch anpassen."></textarea>
+      </div>
+    </div>
+    <div class="out-actions">
+      <button type="button" class="btn primary" id="copyAll">Betreff + Text kopieren</button>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Daten ---------- */
+  const SHIFTS = [
+    { key: 'frueh',  name: 'Frühdienst',   start: '04:00', end: '14:00', color: '#00254c' },
+    { key: 'tag',    name: 'Tagdienst',    start: '06:00', end: '18:00', color: '#ee7202' },
+    { key: 'mittel', name: 'Mitteldienst', start: '11:00', end: '22:00', color: '#247c8f' },
+    { key: 'spaet',  name: 'Spätdienst',   start: '15:00', end: '03:00', color: '#7a3f8a' },
+  ];
+  const SHIFT = Object.fromEntries(SHIFTS.map(s => [s.key, s]));
+
+  const LECTURE = [
+    ['2025-04-22', '2025-07-25'], ['2025-10-13', '2026-02-13'],
+    ['2026-04-13', '2026-07-17'], ['2026-10-12', '2027-02-12'],
+    ['2027-04-12', '2027-07-16'], ['2027-10-11', '2028-02-11'],
+    ['2028-04-18', '2028-07-21'], ['2028-10-16', '2029-02-16'],
+  ];
+
+  const DAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
+  const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+
+  /* ---------- Datums-Helfer ---------- */
+  const pad = n => String(n).padStart(2, '0');
+  const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const monday = d => addDays(d, -((d.getDay() + 6) % 7));
+  const sunday = d => addDays(monday(d), 6);
+  const fmt = s => { const d = parse(s); return `${DAYS[d.getDay()]}, ${d.getDate()}. ${MONTHS[d.getMonth()]} ${d.getFullYear()}`; };
+  function isoWeek(d) {
+    const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    t.setUTCDate(t.getUTCDate() + 4 - (t.getUTCDay() || 7));
+    const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
+    return Math.ceil(((t - y) / 864e5 + 1) / 7);
+  }
+
+  /* ---------- Feiertage (berechnet, Baden-Württemberg) ---------- */
+  function easter(y) {
+    const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4;
+    const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(y, mo - 1, da);
+  }
+  const holidayCache = {};
+  function holidaysOf(y) {
+    if (holidayCache[y]) return holidayCache[y];
+    const e = easter(y), m = {};
+    const set = (d, n) => { m[iso(d)] = n; };
+    set(new Date(y, 0, 1), 'Neujahr');
+    set(new Date(y, 0, 6), 'Heilige Drei Könige');
+    set(addDays(e, -2), 'Karfreitag');
+    set(addDays(e, 1), 'Ostermontag');
+    set(new Date(y, 4, 1), 'Tag der Arbeit');
+    set(addDays(e, 39), 'Christi Himmelfahrt');
+    set(addDays(e, 50), 'Pfingstmontag');
+    set(addDays(e, 60), 'Fronleichnam');
+    set(new Date(y, 9, 3), 'Tag der Deutschen Einheit');
+    set(new Date(y, 10, 1), 'Allerheiligen');
+    set(new Date(y, 11, 25), '1. Weihnachtstag');
+    set(new Date(y, 11, 26), '2. Weihnachtstag');
+    return (holidayCache[y] = m);
+  }
+  const holidayName = s => holidaysOf(+s.slice(0, 4))[s] || null;
+
+  /* ---------- Schulferien (manuell gepflegt) ---------- */
+  const SCHOOL = new Set();
+  [
+    ['2026-03-30', '2026-04-11'], ['2026-05-26', '2026-06-05'], ['2026-07-30', '2026-09-12'],
+    ['2026-10-26', '2026-10-31'], ['2026-12-23', '2027-01-09'], ['2027-03-30', '2027-04-03'],
+    ['2027-05-18', '2027-05-29'], ['2027-07-29', '2027-09-11'], ['2027-11-02', '2027-11-06'],
+    ['2027-12-23', '2028-01-08'],
+  ].forEach(([a, b]) => { for (let c = parse(a), z = parse(b); c <= z; c = addDays(c, 1)) SCHOOL.add(iso(c)); });
+
+  const isLecture = s => LECTURE.some(([a, b]) => s >= a && s <= b);
+
+  /* ---------- Zustand (nur im Speicher) ---------- */
+  const state = {
+    mode: 'duty',
+    lists: { duty: [], time: [] },
+    stage: 0,
+    activeId: null,
+    month: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+  };
+  const cur = () => state.lists[state.mode];
+  const uid = () => Math.random().toString(36).slice(2, 9);
+  const blank = () => ({ id: uid(), start: '', end: '', types: [], from: '06:10', to: '22:00' });
+  const isComplete = e => e.start && e.end && (state.mode === 'duty' ? e.types.length > 0 : e.from && e.to);
+
+  /* ---------- DOM ---------- */
+  const $ = id => document.getElementById(id);
+  const entriesEl = $('entries'), calEl = $('cal');
+
+  function ensureBlank() {
+    const l = cur();
+    if (!l.length || l[l.length - 1].start) l.push(blank());
+  }
+
+  function refresh() {
+    ensureBlank();
+    renderEntries();
+    renderCalendar();
+    renderOutput();
+  }
+
+  /* ---------- Einträge ---------- */
+  function renderEntries() {
+    const duty = state.mode === 'duty';
+    entriesEl.innerHTML = cur().map((e, i) => {
+      const chips = duty ? `<div class="chips">${SHIFTS.map(s => `
+          <button type="button" class="chip" style="--c:${s.color}" data-act="shift" data-k="${s.key}" aria-pressed="${e.types.includes(s.key)}">
+            <span class="dot"></span><span class="t"><b>${s.name}</b><small>${s.start}–${s.end} Uhr</small></span>
+          </button>`).join('')}</div>` : `
+        <div class="grid2">
+          <label class="field"><span>Start</span><input type="time" data-f="from" value="${e.from}"></label>
+          <label class="field"><span>Ende</span><input type="time" data-f="to" value="${e.to}"></label>
+        </div>
+        ${e.from && e.to && e.to <= e.from ? '<p class="hint warn">Ende liegt vor dem Start – gilt als Dienst über Mitternacht.</p>' : ''}`;
+      return `
+      <div class="entry ${e.start ? '' : 'blank'}" data-id="${e.id}">
+        <div class="entry-head">
+          <span class="entry-no">Eintrag ${i + 1}</span>
+          <button type="button" class="icon-btn" data-act="del" aria-label="Eintrag löschen">×</button>
+        </div>
+        <div class="grid2">
+          <label class="field"><span>Von</span><input type="date" data-f="start" value="${e.start}"></label>
+          <label class="field"><span>Bis</span><input type="date" data-f="end" value="${e.end}"></label>
+        </div>
+        ${chips}
+      </div>`;
+    }).join('');
+  }
+
+  entriesEl.addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-act]');
+    if (!btn) return;
+    const row = btn.closest('.entry');
+    const e = cur().find(x => x.id === row.dataset.id);
+    if (!e) return;
+    if (btn.dataset.act === 'del') {
+      state.lists[state.mode] = cur().filter(x => x.id !== e.id);
+      state.stage = 0;
+    } else if (btn.dataset.act === 'shift') {
+      const k = btn.dataset.k;
+      e.types = e.types.includes(k) ? e.types.filter(x => x !== k) : [...e.types, k];
+    }
+    refresh();
+  });
+
+  entriesEl.addEventListener('change', ev => {
+    const inp = ev.target.closest('[data-f]');
+    if (!inp) return;
+    const e = cur().find(x => x.id === inp.closest('.entry').dataset.id);
+    if (!e) return;
+    const f = inp.dataset.f, v = inp.value;
+    state.stage = 0;
+    if (f === 'start') {
+      e.start = v;
+      if (v && (!e.end || e.end < v)) e.end = v;
+    } else if (f === 'end') {
+      e.end = v;
+      if (v && (!e.start || e.start > v)) e.start = v;
+    } else {
+      e[f] = v;
+    }
+    const jump = f === 'start' ? e.start : f === 'end' ? e.end : '';
+    if (jump) { const d = parse(jump); state.month = new Date(d.getFullYear(), d.getMonth(), 1); }
+    refresh();
+  });
+
+  /* ---------- Kalender ---------- */
+  function selectionMap() {
+    const map = {};
+    cur().forEach(e => {
+      if (!e.start) return;
+      const end = e.end || e.start;
+      for (let c = parse(e.start); iso(c) <= end; c = addDays(c, 1)) {
+        const k = iso(c);
+        (map[k] = map[k] || new Set());
+        if (state.mode === 'duty') e.types.forEach(t => map[k].add(t)); else map[k].add('tag');
+      }
+    });
+    return map;
+  }
+
+  function renderCalendar() {
+    const y = state.month.getFullYear(), m = state.month.getMonth();
+    $('calTitle').textContent = `${MONTHS[m]} ${y}`;
+    const sel = selectionMap();
+    const todayIso = iso(new Date());
+    const offset = (new Date(y, m, 1).getDay() + 6) % 7;
+    const count = new Date(y, m + 1, 0).getDate();
+
+    let html = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'].map(d => `<div class="wd">${d}</div>`).join('');
+    for (let i = 0; i < offset; i++) html += '<div class="day empty"></div>';
+    for (let d = 1; d <= count; d++) {
+      const s = `${y}-${pad(m + 1)}-${pad(d)}`;
+      const h = holidayName(s);
+      const cls = ['day'];
+      if (h) cls.push('holiday'); else if (SCHOOL.has(s)) cls.push('school');
+      if (s === todayIso) cls.push('today');
+      const types = sel[s];
+      if (types) cls.push('sel');
+      const dots = types ? [...types].map(t => `<i style="--c:${SHIFT[t].color}"></i>`).join('') : '';
+      const label = `${fmt(s)}${h ? ', ' + h : SCHOOL.has(s) ? ', Ferien' : ''}${types ? ', ausgewählt' : ''}`;
+      html += `<button type="button" class="${cls.join(' ')}" data-d="${s}" aria-label="${label}" title="${h || ''}"><span class="num">${d}</span><span class="dots">${dots}</span></button>`;
+    }
+    calEl.innerHTML = html;
+
+    const st = $('stage');
+    st.className = 'stage' + (state.stage ? ' on' : '');
+    st.textContent = state.stage ? 'Jetzt Endtag antippen' : 'Starttag antippen';
+    renderLegend();
+  }
+
+  function renderLegend() {
+    const items = [];
+    if (state.mode === 'duty') SHIFTS.forEach(s => items.push(`<span><i class="round" style="background:${s.color}"></i>${s.name}</span>`));
+    items.push('<span><i style="background:var(--school-bg)"></i>Ferien</span>');
+    items.push('<span><i style="background:var(--holiday-bg)"></i>Feiertag</span>');
+    items.push('<span><i style="background:var(--navy)"></i>Ausgewählt</span>');
+    $('legend').innerHTML = items.join('');
+  }
+
+  calEl.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-d]');
+    if (!b) return;
+    pick(b.dataset.d);
+  });
+
+  function pick(s) {
+    const l = cur();
+    if (state.stage === 1) {
+      const e = l.find(x => x.id === state.activeId);
+      if (e) {
+        if (s < e.start) { e.end = e.start; e.start = s; } else e.end = s;
+        state.stage = 0;
+        refresh();
+        return;
+      }
+    }
+    let e = l.find(x => !x.start);
+    if (!e) { e = blank(); l.push(e); }
+    e.start = s; e.end = s;
+    state.activeId = e.id;
+    state.stage = 1;
+    refresh();
+  }
+
+  $('prevBtn').addEventListener('click', () => { state.month = new Date(state.month.getFullYear(), state.month.getMonth() - 1, 1); renderCalendar(); });
+  $('nextBtn').addEventListener('click', () => { state.month = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 1); renderCalendar(); });
+  $('todayBtn').addEventListener('click', () => { const n = new Date(); state.month = new Date(n.getFullYear(), n.getMonth(), 1); renderCalendar(); });
+
+  /* ---------- Toolbar ---------- */
+  function setMode(m) {
+    state.mode = m;
+    state.stage = 0;
+    $('modeDuty').setAttribute('aria-pressed', m === 'duty');
+    $('modeTime').setAttribute('aria-pressed', m === 'time');
+    refresh();
+  }
+  $('modeDuty').addEventListener('click', () => setMode('duty'));
+  $('modeTime').addEventListener('click', () => setMode('time'));
+
+  $('addBtn').addEventListener('click', () => {
+    const l = cur();
+    if (!l.some(x => !x.start)) l.push(blank());
+    refresh();
+    const first = entriesEl.querySelector('.entry.blank input');
+    if (first) first.focus({ preventScroll: false });
+  });
+
+  $('nextWeekBtn').addEventListener('click', () => {
+    const mon = addDays(monday(new Date()), 7);
+    const l = cur();
+    let e = l.find(x => !x.start);
+    if (!e) { e = blank(); l.push(e); }
+    e.start = iso(mon); e.end = iso(addDays(mon, 6));
+    state.stage = 0;
+    state.month = new Date(mon.getFullYear(), mon.getMonth(), 1);
+    refresh();
+    toast('Nächste Woche eingetragen – jetzt Dienstarten wählen');
+  });
+
+  /* ---------- Ausgabe ---------- */
+  function renderOutput() {
+    const valid = cur().filter(isComplete).sort((a, b) => a.start.localeCompare(b.start));
+    const notes = [];
+
+    cur().forEach((e, i) => {
+      if (e.start && !isComplete(e)) notes.push(`Eintrag ${i + 1} ist noch unvollständig und wird nicht übernommen.`);
+    });
+    for (let i = 0; i < valid.length; i++) for (let j = i + 1; j < valid.length; j++) {
+      if (valid[i].start <= valid[j].end && valid[j].start <= valid[i].end) notes.push('Zwei Einträge überschneiden sich – bitte prüfen.');
+    }
+    $('notes').innerHTML = [...new Set(notes)].map(n => `<div class="note">${n}</div>`).join('');
+
+    if (!valid.length) {
+      $('subject').value = '';
+      $('body').value = '';
+      sizeBody();
+      setStatus(null);
+      return;
+    }
+
+    const firstStart = valid[0].start;
+    const lastEnd = valid.reduce((m, e) => (e.end > m ? e.end : m), valid[0].end);
+    $('subject').value = `Verfügbarkeit von ${fmt(iso(monday(parse(firstStart))))} bis ${fmt(iso(sunday(parse(lastEnd))))}`;
+
+    /* Wochen (Mo–So) mit Vorlesungsstatus – Mittwoch als Referenztag */
+    const weeks = new Map();
+    valid.forEach(e => {
+      for (let c = parse(e.start); iso(c) <= e.end; c = addDays(c, 1)) {
+        const mon = monday(c);
+        const k = iso(mon);
+        if (!weeks.has(k)) weeks.set(k, { kw: isoWeek(mon), lec: isLecture(iso(addDays(mon, 2))) });
+      }
+    });
+    const wl = [...weeks.values()];
+    const lecKW = wl.filter(w => w.lec).map(w => w.kw);
+    const freeKW = wl.filter(w => !w.lec).map(w => w.kw);
+    setStatus(lecKW.length && freeKW.length ? 'mixed' : lecKW.length ? 'lec' : 'free');
+
+    const L = [];
+    L.push('Sehr geehrte Damen und Herren der Zentralen Diensteinteilung,', '');
+    L.push('ich möchte Ihnen meine Verfügbarkeit für folgenden Zeitraum mitteilen:', '');
+
+    valid.forEach((e, i) => {
+      const range = e.start === e.end ? `am ${fmt(e.start)}` : `vom ${fmt(e.start)} bis ${fmt(e.end)}`;
+      if (state.mode === 'duty') {
+        const txt = e.types.length === SHIFTS.length ? 'ganztägig' : SHIFTS.filter(s => e.types.includes(s.key)).map(s => s.name).join(', ');
+        L.push(`– Zeitraum ${i + 1}: ${range}`, `– Dienstarten: ${txt}`, '');
+      } else {
+        L.push(`– Zeitraum ${i + 1}: ${range}`, `– Uhrzeit: ${e.from} Uhr – ${e.to} Uhr`, '');
+      }
+    });
+
+    L.push('Bitte beachten Sie:');
+    const kw = a => (a.length === 1 ? `KW ${a[0]}` : `KW ${a.join(', ')}`);
+    if (!freeKW.length) L.push('• Ich kann maximal 20 Stunden pro Woche arbeiten (Vorlesungszeit).');
+    else if (!lecKW.length) L.push('• Ich kann maximal 40 Stunden pro Woche arbeiten (vorlesungsfreie Zeit).');
+    else {
+      L.push(`• In der Vorlesungszeit (${kw(lecKW)}) kann ich maximal 20 Stunden pro Woche arbeiten.`);
+      L.push(`• In der vorlesungsfreien Zeit (${kw(freeKW)}) kann ich maximal 40 Stunden pro Woche arbeiten.`);
+    }
+    L.push('• Ich kann keine geteilten Dienste übernehmen.', '');
+    L.push('Mit freundlichen Grüßen', '', 'Samet Aslan', 'Studentische Aushilfe – Straßenbahn');
+
+    $('body').value = L.join('\n');
+    sizeBody();
+  }
+
+  function setStatus(kind) {
+    const el = $('status');
+    if (!kind) kind = isLecture(iso(new Date())) ? 'lec' : 'free';
+    const map = {
+      lec: ['Vorlesungszeit', 'var(--lec)'],
+      free: ['Vorlesungsfreie Zeit', 'var(--free)'],
+      mixed: ['Vorlesung + vorlesungsfrei', 'var(--orange)'],
+    };
+    el.textContent = map[kind][0];
+    el.style.background = map[kind][1];
+  }
+
+  function sizeBody() {
+    const t = $('body');
+    t.style.height = 'auto';
+    t.style.height = Math.max(320, t.scrollHeight + 4) + 'px';
+  }
+  $('body').addEventListener('input', sizeBody);
+
+  /* ---------- Kopieren ---------- */
+  async function copyText(text) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
+    } catch (e) { /* Fallback unten */ }
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    ta.remove();
+    return ok;
+  }
+
+  let toastTimer;
+  function toast(msg, err) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (err ? ' err' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { t.className = 'toast'; }, 2000);
+  }
+
+  async function doCopy(text, okMsg) {
+    if (!text.trim()) { toast('Noch nichts zum Kopieren', true); return; }
+    const ok = await copyText(text);
+    ok ? toast(okMsg) : toast('Kopieren nicht möglich – Text bitte markieren', true);
+  }
+
+  $('copySubject').addEventListener('click', () => doCopy($('subject').value, 'Betreff kopiert'));
+  $('copyBody').addEventListener('click', () => doCopy($('body').value, 'Text kopiert'));
+  $('copyAll').addEventListener('click', () => doCopy(`${$('subject').value}\n\n${$('body').value}`, 'Betreff + Text kopiert'));
+
+  /* ---------- Start ---------- */
+  refresh();
+})();
+</script>
+</body>
+</html>
